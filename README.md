@@ -2,6 +2,8 @@
 
 A beautiful, full-stack web application that lets two Spotify users compare their music tastes through a shareable link. Built with Next.js, TypeScript, and Tailwind CSS.
 
+<!-- Updated for Vercel deployment -->
+
 ## Features
 
 - 🔐 **Spotify OAuth Authentication** - Secure login with Spotify
