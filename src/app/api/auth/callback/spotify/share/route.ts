@@ -74,10 +74,15 @@ export async function GET(req: NextRequest) {
     );
 
     // Read the callbackUrl from state parameter
-    const callbackUrl = req.nextUrl.searchParams.get('state') || '/dashboard';
+    const stateParam = req.nextUrl.searchParams.get('state');
+    const callbackUrl = stateParam || '/dashboard';
     
-    console.log('Share callback - state parameter:', req.nextUrl.searchParams.get('state'));
-    console.log('Share callback - redirecting to:', callbackUrl);
+    console.log('🔍 Share Callback Redirect Debug:');
+    console.log('  - State parameter:', stateParam);
+    console.log('  - Callback URL:', callbackUrl);
+    console.log('  - Base URL:', baseUrl);
+    console.log('  - Full redirect URL:', `${baseUrl}${callbackUrl}`);
+    console.log('  - All query params:', Object.fromEntries(req.nextUrl.searchParams.entries()));
     
     // Redirect to the callbackUrl with the JWT as a cookie
     const response = NextResponse.redirect(`${baseUrl}${callbackUrl}`);

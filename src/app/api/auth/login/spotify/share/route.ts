@@ -33,10 +33,12 @@ export async function GET(req: NextRequest) {
     state: callbackUrl,
   });
 
-  console.log('Spotify share authorize params:', params.toString());
-  console.log('Base URL detected:', baseUrl);
-  console.log('Redirect URI:', redirectUri);
-  console.log('Client ID (trimmed):', process.env.SPOTIFY_CLIENT_ID!.trim());
+  console.log('🔍 Spotify Share Login Debug:');
+  console.log('  - Callback URL:', callbackUrl);
+  console.log('  - State parameter:', callbackUrl);
+  console.log('  - Redirect URI:', redirectUri);
+  console.log('  - Full authorize URL params:', params.toString());
+  console.log('  - Client ID (trimmed):', process.env.SPOTIFY_CLIENT_ID!.trim());
 
   const spotifyAuthUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
   return NextResponse.redirect(spotifyAuthUrl);
