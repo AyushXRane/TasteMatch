@@ -6,11 +6,7 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');
   const error = req.nextUrl.searchParams.get('error');
   
-  console.log('🔍 Spotify Share Callback Debug:');
-  console.log('  - Code exists:', !!code);
-  console.log('  - Error exists:', !!error);
-  console.log('  - Full URL:', req.url);
-  console.log('  - Query params:', Object.fromEntries(req.nextUrl.searchParams.entries()));
+
   
   if (error) {
     console.error('❌ Spotify OAuth Error:', error);
@@ -29,24 +25,14 @@ export async function GET(req: NextRequest) {
     const baseUrl = `${protocol}://${host}`;
     const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify/share';
 
-    console.log('🔍 Share Token Exchange Debug:');
-    console.log('  - Protocol:', protocol);
-    console.log('  - Host:', host);
-    console.log('  - Base URL:', baseUrl);
-    console.log('  - Redirect URI:', redirectUri);
-    console.log('  - Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
-    console.log('  - Client Secret exists:', !!process.env.SPOTIFY_CLIENT_SECRET);
-    console.log('  - JWT Secret exists:', !!process.env.JWT_SECRET);
+
 
     // Exchange code for access and refresh tokens using Basic Auth
     const clientId = process.env.SPOTIFY_CLIENT_ID!.trim();
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!.trim();
     const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     
-    console.log('🔍 Share Token Exchange Details:');
-    console.log('  - Client ID (trimmed):', `"${clientId}"`);
-    console.log('  - Client Secret (trimmed):', `"${clientSecret}"`);
-    console.log('  - Basic Auth (first 20 chars):', basicAuth.substring(0, 20) + '...');
+
     
     const tokenRes = await axios.post(
       'https://accounts.spotify.com/api/token',
@@ -63,7 +49,7 @@ export async function GET(req: NextRequest) {
       }
     );
 
-    console.log('✅ Share token exchange successful');
+
     const { access_token, refresh_token, expires_in } = tokenRes.data;
 
     // Create a JWT for session management
@@ -73,26 +59,36 @@ export async function GET(req: NextRequest) {
       { expiresIn: expires_in }
     );
 
-    // Read the callbackUrl from state parameter - with better fallback logic
+    // For share links, always try to redirect to comparison page
+    // Extract sessionId from state parameter or referer
     const stateParam = req.nextUrl.searchParams.get('state');
-    let callbackUrl = stateParam ? decodeURIComponent(stateParam) : null;
+    let sessionId = null;
     
-    // If no state parameter, try to extract from referer or default to dashboard
-    if (!callbackUrl) {
+    if (stateParam) {
+      const decodedState = decodeURIComponent(stateParam);
+      const match = decodedState.match(/\/compare\/([^\/\?]+)/);
+      if (match) {
+        sessionId = match[1];
+      }
+    }
+    
+    // If no sessionId in state, try referer
+    if (!sessionId) {
       const referer = req.headers.get('referer');
       if (referer) {
-        // Try to extract sessionId from referer URL
         const match = referer.match(/\/compare\/([^\/\?]+)/);
         if (match) {
-          callbackUrl = `/compare/${match[1]}`;
+          sessionId = match[1];
         }
       }
     }
     
-    // Final fallback
-    if (!callbackUrl) {
-      callbackUrl = '/dashboard';
-    }
+    // Set callback URL
+    const callbackUrl = sessionId ? `/compare/${sessionId}` : '/dashboard';
+    
+    console.log('🔍 FINAL REDIRECT:', `${baseUrl}${callbackUrl}`);
+    console.log('🔍 SessionId found:', sessionId);
+    console.log('🔍 State param:', stateParam);
     
     // Redirect to the callbackUrl with the JWT as a cookie
     const response = NextResponse.redirect(`${baseUrl}${callbackUrl}`);
