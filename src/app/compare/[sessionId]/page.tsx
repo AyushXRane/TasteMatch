@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
 
 interface UserProfile {
@@ -110,7 +110,9 @@ export default function ComparePage() {
   console.log('🔄 ComparePage component loaded');
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const sessionId = params.sessionId as string;
+  const authSuccess = searchParams.get('auth') === 'success';
 
   const [sessionInfo, setSessionInfo] = useState<{ user1: UserProfile; hasUser2: boolean } | null>(null);
   const [comparisonData, setComparisonData] = useState<ComparisonResponse | null>(null);
@@ -128,6 +130,17 @@ export default function ComparePage() {
   useEffect(() => {
     fetchSessionInfo();
   }, [sessionId]);
+
+  // If auth=success is detected, automatically trigger comparison
+  useEffect(() => {
+    if (authSuccess && sessionInfo && !sessionInfo.hasUser2) {
+      console.log('🔍 Auth success detected, triggering comparison');
+      // Small delay to ensure session is ready
+      setTimeout(() => {
+        fetchComparison();
+      }, 1000);
+    }
+  }, [authSuccess, sessionInfo, sessionId]);
 
   // Check if user is logged in and automatically trigger comparison
   useEffect(() => {

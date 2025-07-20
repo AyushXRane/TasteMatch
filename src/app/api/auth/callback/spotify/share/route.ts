@@ -83,8 +83,8 @@ export async function GET(req: NextRequest) {
       }
     }
     
-    // Set callback URL
-    const callbackUrl = sessionId ? `/compare/${sessionId}` : '/dashboard';
+    // Set callback URL with auth bypass parameter
+    const callbackUrl = sessionId ? `/compare/${sessionId}?auth=success` : '/dashboard';
     
 
     

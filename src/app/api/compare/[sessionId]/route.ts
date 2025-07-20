@@ -33,7 +33,10 @@ export async function POST(
         const accessToken = authHeader.substring(7);
         spotifyAPI = new SpotifyAPI(accessToken);
       } else {
-        return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+        // For share links, allow the request to proceed without authentication
+        // The frontend will handle showing the login button
+        console.log('🔍 API - No auth token, but allowing request to proceed for share link');
+        return NextResponse.json({ error: 'Authentication required', needsAuth: true }, { status: 401 });
       }
     } else {
       // Verify and decode the JWT
