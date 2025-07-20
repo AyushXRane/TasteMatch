@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const baseUrl = `${protocol}://${host}`;
   
   // Use a simple redirect URI without any query parameters
-  const redirectUri = `${baseUrl}/api/auth/callback/spotify`;
+      const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify';
 
   // Debug logging
   console.log('🔍 Spotify OAuth Debug Info:');

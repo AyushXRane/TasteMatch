@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const protocol = req.headers.get('x-forwarded-proto') || 'https';
     const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
     const baseUrl = `${protocol}://${host}`;
-    const redirectUri = `${baseUrl}/api/auth/callback/spotify/share`;
+    const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify/share';
 
     console.log('🔍 Share Token Exchange Debug:');
     console.log('  - Protocol:', protocol);

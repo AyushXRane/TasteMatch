@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const baseUrl = `${protocol}://${host}`;
 
   // Always use clean redirect_uri for share links, put callbackUrl in state parameter
-  const redirectUri = `${baseUrl}/api/auth/callback/spotify/share`;
+      const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify/share';
 
   const params = new URLSearchParams({
     client_id: process.env.SPOTIFY_CLIENT_ID!.trim(), // Remove any whitespace
