@@ -39,9 +39,14 @@ export async function GET(req: NextRequest) {
     console.log('  - JWT Secret exists:', !!process.env.JWT_SECRET);
 
     // Exchange code for access and refresh tokens using Basic Auth
-    const clientId = process.env.SPOTIFY_CLIENT_ID!;
-    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
+    const clientId = process.env.SPOTIFY_CLIENT_ID!.trim();
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!.trim();
     const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    
+    console.log('🔍 Share Token Exchange Details:');
+    console.log('  - Client ID (trimmed):', `"${clientId}"`);
+    console.log('  - Client Secret (trimmed):', `"${clientSecret}"`);
+    console.log('  - Basic Auth (first 20 chars):', basicAuth.substring(0, 20) + '...');
     
     const tokenRes = await axios.post(
       'https://accounts.spotify.com/api/token',
