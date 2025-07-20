@@ -18,8 +18,7 @@ export async function GET(req: NextRequest) {
   // Ensure callbackUrl is properly encoded for the state parameter
   const encodedCallbackUrl = encodeURIComponent(callbackUrl);
   
-  console.log('🔍 LOGIN - CallbackUrl:', callbackUrl);
-  console.log('🔍 LOGIN - Encoded callbackUrl:', encodedCallbackUrl);
+
   
   const params = new URLSearchParams({
     client_id: process.env.SPOTIFY_CLIENT_ID!.trim(), // Remove any whitespace

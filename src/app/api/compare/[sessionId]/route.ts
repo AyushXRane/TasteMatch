@@ -21,13 +21,25 @@ export async function POST(
 
     // Get the JWT token from cookies
     const token = req.cookies.get('taste_token')?.value;
+    console.log('🔍 API - taste_token exists:', !!token);
+    console.log('🔍 API - All cookies:', req.cookies.getAll().map(c => c.name));
+    
+    let spotifyAPI: SpotifyAPI;
+    
     if (!token) {
-      return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      // For share links, try to get token from Authorization header as fallback
+      const authHeader = req.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const accessToken = authHeader.substring(7);
+        spotifyAPI = new SpotifyAPI(accessToken);
+      } else {
+        return NextResponse.json({ error: 'No authentication token' }, { status: 401 });
+      }
+    } else {
+      // Verify and decode the JWT
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { access_token: string };
+      spotifyAPI = new SpotifyAPI(decoded.access_token);
     }
-
-    // Verify and decode the JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { access_token: string };
-    const spotifyAPI = new SpotifyAPI(decoded.access_token);
 
     // Get the existing session
     const session = storage.getSession(sessionId);

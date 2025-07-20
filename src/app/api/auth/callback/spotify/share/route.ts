@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     const token = jwt.sign(
       { access_token, refresh_token },
       process.env.JWT_SECRET!,
-      { expiresIn: expires_in }
+      { expiresIn: '1h' } // Use fixed expiration instead of expires_in
     );
 
     // For share links, always try to redirect to comparison page
@@ -86,18 +86,20 @@ export async function GET(req: NextRequest) {
     // Set callback URL
     const callbackUrl = sessionId ? `/compare/${sessionId}` : '/dashboard';
     
-    console.log('🔍 FINAL REDIRECT:', `${baseUrl}${callbackUrl}`);
-    console.log('🔍 SessionId found:', sessionId);
-    console.log('🔍 State param:', stateParam);
+
     
     // Redirect to the callbackUrl with the JWT as a cookie
     const response = NextResponse.redirect(`${baseUrl}${callbackUrl}`);
     response.cookies.set('taste_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: expires_in,
+      secure: true, // Always use secure for Vercel
+      maxAge: 3600, // 1 hour in seconds
       path: '/',
+      sameSite: 'lax',
     });
+
+    console.log('🔍 Setting cookie - token length:', token.length);
+    console.log('🔍 Redirecting to:', `${baseUrl}${callbackUrl}`);
 
     return response;
   } catch (error: any) {

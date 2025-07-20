@@ -137,6 +137,7 @@ export default function ComparePage() {
         try {
           const response = await fetch(`/api/compare/${sessionId}`, {
             method: 'POST',
+            credentials: 'include', // Ensure cookies are sent
           });
           if (response.ok) {
             const data = await response.json();
@@ -181,10 +182,11 @@ export default function ComparePage() {
     try {
       const response = await fetch(`/api/compare/${sessionId}`, {
         method: 'POST',
+        credentials: 'include', // Ensure cookies are sent
       });
       if (!response.ok) {
         if (response.status === 401) {
-          router.push('/');
+          // Don't redirect, just stay on the page and show login button
           return;
         }
         throw new Error('Failed to fetch comparison');
