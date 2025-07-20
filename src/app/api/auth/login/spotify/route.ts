@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  // Get callbackUrl from query params, if present
-  const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
-  
   // Automatically detect the base URL from the request
   const protocol = req.headers.get('x-forwarded-proto') || 'https';
   const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
   const baseUrl = `${protocol}://${host}`;
   
-  // Build the redirect_uri, appending callbackUrl if present
-  let redirectUri = `${baseUrl}/api/auth/callback/spotify`;
-  if (callbackUrl) {
-    redirectUri += `?callbackUrl=${callbackUrl}`;
-  }
+  // Use a simple redirect URI without any query parameters
+  const redirectUri = `${baseUrl}/api/auth/callback/spotify`;
 
   // Debug logging
   console.log('🔍 Spotify OAuth Debug Info:');

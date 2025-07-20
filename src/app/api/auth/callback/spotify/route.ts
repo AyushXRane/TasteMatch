@@ -28,19 +28,14 @@ export async function GET(req: NextRequest) {
     const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
     const baseUrl = `${protocol}://${host}`;
     
-    // Build the redirect_uri exactly like the login route does
-    const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
-    let redirectUri = `${baseUrl}/api/auth/callback/spotify`;
-    if (callbackUrl) {
-      redirectUri += `?callbackUrl=${callbackUrl}`;
-    }
+    // Use a simple redirect URI without any query parameters
+    const redirectUri = `${baseUrl}/api/auth/callback/spotify`;
 
     console.log('🔍 Token Exchange Debug:');
     console.log('  - Protocol:', protocol);
     console.log('  - Host:', host);
     console.log('  - Base URL:', baseUrl);
     console.log('  - Redirect URI:', redirectUri);
-    console.log('  - Callback URL param:', callbackUrl);
     console.log('  - Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
     console.log('  - Client Secret exists:', !!process.env.SPOTIFY_CLIENT_SECRET);
     console.log('  - JWT Secret exists:', !!process.env.JWT_SECRET);
@@ -50,16 +45,23 @@ export async function GET(req: NextRequest) {
     console.log('  - Client Secret length:', process.env.SPOTIFY_CLIENT_SECRET?.length);
 
     // Exchange code for access and refresh tokens
+    const clientId = process.env.SPOTIFY_CLIENT_ID!;
+    const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
+    const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    
     const tokenRes = await axios.post(
       'https://accounts.spotify.com/api/token',
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
         redirect_uri: redirectUri,
-        client_id: process.env.SPOTIFY_CLIENT_ID!,
-        client_secret: process.env.SPOTIFY_CLIENT_SECRET!,
       }),
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      { 
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': `Basic ${basicAuth}`
+        } 
+      }
     );
 
     console.log('✅ Token exchange successful');
@@ -73,7 +75,7 @@ export async function GET(req: NextRequest) {
     );
 
     // Read the callbackUrl from query parameters
-    const finalCallbackUrl = callbackUrl || '/dashboard';
+    const finalCallbackUrl = req.nextUrl.searchParams.get('callbackUrl') || '/dashboard';
     // Redirect to the callbackUrl with the JWT as a cookie
     const response = NextResponse.redirect(`${baseUrl}${finalCallbackUrl}`);
     response.cookies.set('taste_token', token, {
