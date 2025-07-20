@@ -21,10 +21,15 @@ export async function GET(req: NextRequest) {
     // Create a comparison session
     const sessionId = storage.createSession(tasteProfile);
 
+    // Automatically detect the base URL from the request
+    const protocol = req.headers.get('x-forwarded-proto') || 'https';
+    const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
+    const baseUrl = `${protocol}://${host}`;
+
     return NextResponse.json({
       user: tasteProfile.user,
       sessionId,
-      shareUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/compare/${sessionId}`,
+      shareUrl: `${baseUrl}/compare/${sessionId}`,
     });
   } catch (error: any) {
     console.error('Error fetching user profile:', error);

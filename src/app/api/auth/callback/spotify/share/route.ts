@@ -9,13 +9,18 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Automatically detect the base URL from the request
+    const protocol = req.headers.get('x-forwarded-proto') || 'https';
+    const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
+    const baseUrl = `${protocol}://${host}`;
+
     // Exchange code for access and refresh tokens
     const tokenRes = await axios.post(
       'https://accounts.spotify.com/api/token',
       new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/spotify/share`,
+        redirect_uri: `${baseUrl}/api/auth/callback/spotify/share`,
         client_id: process.env.SPOTIFY_CLIENT_ID!,
         client_secret: process.env.SPOTIFY_CLIENT_SECRET!,
       }),
@@ -38,7 +43,7 @@ export async function GET(req: NextRequest) {
     console.log('Share callback - redirecting to:', callbackUrl);
     
     // Redirect to the callbackUrl with the JWT as a cookie
-    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_BASE_URL}${callbackUrl}`);
+    const response = NextResponse.redirect(`${baseUrl}${callbackUrl}`);
     response.cookies.set('taste_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

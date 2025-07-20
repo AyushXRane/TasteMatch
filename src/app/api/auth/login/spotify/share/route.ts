@@ -7,11 +7,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No callbackUrl provided' }, { status: 400 });
   }
 
+  // Automatically detect the base URL from the request
+  const protocol = req.headers.get('x-forwarded-proto') || 'https';
+  const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
+  const baseUrl = `${protocol}://${host}`;
+
   // Always use clean redirect_uri for share links, put callbackUrl in state parameter
-  const redirectUri = `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/callback/spotify/share`;
+  const redirectUri = `${baseUrl}/api/auth/callback/spotify/share`;
 
   const params = new URLSearchParams({
-    client_id: process.env.SPOTIFY_CLIENT_ID!,
+    client_id: process.env.SPOTIFY_CLIENT_ID!.trim(), // Remove any whitespace
     response_type: 'code',
     redirect_uri: redirectUri,
     scope: [
@@ -29,8 +34,10 @@ export async function GET(req: NextRequest) {
   });
 
   console.log('Spotify share authorize params:', params.toString());
+  console.log('Base URL detected:', baseUrl);
+  console.log('Redirect URI:', redirectUri);
+  console.log('Client ID (trimmed):', process.env.SPOTIFY_CLIENT_ID!.trim());
 
-  return NextResponse.redirect(
-    `https://accounts.spotify.com/authorize?${params.toString()}`
-  );
+  const spotifyAuthUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
+  return NextResponse.redirect(spotifyAuthUrl);
 } 
