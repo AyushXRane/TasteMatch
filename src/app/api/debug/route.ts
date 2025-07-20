@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  // Only allow in development or with a secret key
-  if (process.env.NODE_ENV === 'production' && req.nextUrl.searchParams.get('key') !== process.env.DEBUG_KEY) {
-    return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
-  }
-
   const protocol = req.headers.get('x-forwarded-proto') || 'https';
   const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
   const baseUrl = `${protocol}://${host}`;
