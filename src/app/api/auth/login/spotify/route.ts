@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const baseUrl = `${protocol}://${host}`;
   
   // Use a simple redirect URI without any query parameters
-      const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify';
+      const redirectUri = process.env.REDIRECT_URI || 'https://tastematch.vercel.app/api/auth/callback/spotify';
 
   // Debug logging
   console.log('🔍 Spotify OAuth Debug Info:');
@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
   console.log('  - Host:', host);
   console.log('  - Base URL:', baseUrl);
   console.log('  - Redirect URI:', redirectUri);
+  console.log('  - REDIRECT_URI env var:', process.env.REDIRECT_URI);
   console.log('  - Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
   console.log('  - Client ID length:', process.env.SPOTIFY_CLIENT_ID?.length);
   console.log('  - Client ID (first 10 chars):', process.env.SPOTIFY_CLIENT_ID?.substring(0, 10) + '...');

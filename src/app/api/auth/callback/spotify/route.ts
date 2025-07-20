@@ -28,14 +28,15 @@ export async function GET(req: NextRequest) {
     const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
     const baseUrl = `${protocol}://${host}`;
     
-    // Use a simple redirect URI without any query parameters
-    const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify';
+    // Use environment variable for redirect URI
+    const redirectUri = process.env.REDIRECT_URI || 'https://tastematch.vercel.app/api/auth/callback/spotify';
 
     console.log('🔍 Token Exchange Debug:');
     console.log('  - Protocol:', protocol);
     console.log('  - Host:', host);
     console.log('  - Base URL:', baseUrl);
     console.log('  - Redirect URI:', redirectUri);
+    console.log('  - REDIRECT_URI env var:', process.env.REDIRECT_URI);
     console.log('  - Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
     console.log('  - Client Secret exists:', !!process.env.SPOTIFY_CLIENT_SECRET);
     console.log('  - JWT Secret exists:', !!process.env.JWT_SECRET);
