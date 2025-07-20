@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     console.log('🎵 Shared genre tracks added:', user1SharedGenreTracks.length + user2SharedGenreTracks.length);
     
     // Step 4: Fill remaining slots with PERFECTLY BALANCED representation
-    const remainingSlots = 20 - mixedTracks.length;
+    const remainingSlots = 50 - mixedTracks.length;
     const slotsPerUser = Math.floor(remainingSlots / 2); // Use floor to ensure equal split
     
     // Get remaining unique tracks for each user
@@ -100,20 +100,20 @@ export async function POST(req: NextRequest) {
     
     // Add remaining tracks in strict alternating order
     const maxRemaining = Math.max(user1Remaining.length, user2Remaining.length);
-    for (let i = 0; i < maxRemaining && mixedTracks.length < 20; i++) {
+    for (let i = 0; i < maxRemaining && mixedTracks.length < 50; i++) {
       if (i < user1Remaining.length) {
         mixedTracks.push(user1Remaining[i]);
       }
-      if (i < user2Remaining.length && mixedTracks.length < 20) {
+      if (i < user2Remaining.length && mixedTracks.length < 50) {
         mixedTracks.push(user2Remaining[i]);
       }
     }
     
-    // Remove any duplicates and take exactly 20 tracks
+    // Remove any duplicates and take exactly 50 tracks
     const uniqueTracks = mixedTracks.filter((track, index, self) => 
       index === self.findIndex(t => t.id === track.id)
     );
-    const selectedTracks = uniqueTracks.slice(0, 20);
+    const selectedTracks = uniqueTracks.slice(0, 50);
     
     console.log('🎵 Final playlist tracks:', selectedTracks.length);
     console.log('🎵 User1 tracks in playlist:', selectedTracks.filter(t => user1TrackIds.has(t.id)).length);
@@ -190,8 +190,8 @@ export async function POST_blended(req: NextRequest) {
       user1Tracks.filter(t => !blendedTracks.some(bt => bt.id === t.id)),
       user2Tracks.filter(t => !blendedTracks.some(bt => bt.id === t.id))
     );
-    // Take top 20
-    blendedTracks = blendedTracks.slice(0, 20);
+    // Take top 50
+    blendedTracks = blendedTracks.slice(0, 50);
     const trackUris = blendedTracks.map(track => `spotify:track:${track.id}`);
 
     // Create playlist name
