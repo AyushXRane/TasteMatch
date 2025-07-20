@@ -73,16 +73,26 @@ export async function GET(req: NextRequest) {
       { expiresIn: expires_in }
     );
 
-    // Read the callbackUrl from state parameter
+    // Read the callbackUrl from state parameter - with better fallback logic
     const stateParam = req.nextUrl.searchParams.get('state');
-    const callbackUrl = stateParam || '/dashboard';
+    let callbackUrl = stateParam ? decodeURIComponent(stateParam) : null;
     
-    console.log('🔍 Share Callback Redirect Debug:');
-    console.log('  - State parameter:', stateParam);
-    console.log('  - Callback URL:', callbackUrl);
-    console.log('  - Base URL:', baseUrl);
-    console.log('  - Full redirect URL:', `${baseUrl}${callbackUrl}`);
-    console.log('  - All query params:', Object.fromEntries(req.nextUrl.searchParams.entries()));
+    // If no state parameter, try to extract from referer or default to dashboard
+    if (!callbackUrl) {
+      const referer = req.headers.get('referer');
+      if (referer) {
+        // Try to extract sessionId from referer URL
+        const match = referer.match(/\/compare\/([^\/\?]+)/);
+        if (match) {
+          callbackUrl = `/compare/${match[1]}`;
+        }
+      }
+    }
+    
+    // Final fallback
+    if (!callbackUrl) {
+      callbackUrl = '/dashboard';
+    }
     
     // Redirect to the callbackUrl with the JWT as a cookie
     const response = NextResponse.redirect(`${baseUrl}${callbackUrl}`);

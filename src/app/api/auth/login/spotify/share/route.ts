@@ -15,6 +15,9 @@ export async function GET(req: NextRequest) {
   // Always use clean redirect_uri for share links, put callbackUrl in state parameter
       const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify/share';
 
+  // Ensure callbackUrl is properly encoded for the state parameter
+  const encodedCallbackUrl = encodeURIComponent(callbackUrl);
+  
   const params = new URLSearchParams({
     client_id: process.env.SPOTIFY_CLIENT_ID!.trim(), // Remove any whitespace
     response_type: 'code',
@@ -30,15 +33,10 @@ export async function GET(req: NextRequest) {
       'user-read-playback-state'
     ].join(' '),
     show_dialog: 'true',
-    state: callbackUrl,
+    state: encodedCallbackUrl,
   });
 
-  console.log('🔍 Spotify Share Login Debug:');
-  console.log('  - Callback URL:', callbackUrl);
-  console.log('  - State parameter:', callbackUrl);
-  console.log('  - Redirect URI:', redirectUri);
-  console.log('  - Full authorize URL params:', params.toString());
-  console.log('  - Client ID (trimmed):', process.env.SPOTIFY_CLIENT_ID!.trim());
+
 
   const spotifyAuthUrl = `https://accounts.spotify.com/authorize?${params.toString()}`;
   return NextResponse.redirect(spotifyAuthUrl);

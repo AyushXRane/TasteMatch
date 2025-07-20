@@ -133,25 +133,18 @@ export default function ComparePage() {
   useEffect(() => {
     const checkAndTriggerComparison = async () => {
       if (sessionInfo && !sessionInfo.hasUser2) {
-        console.log('🔍 ComparePage: Checking if user is logged in for session:', sessionId);
         // Try to fetch comparison - if it succeeds, user is logged in
         try {
           const response = await fetch(`/api/compare/${sessionId}`, {
             method: 'POST',
           });
-          console.log('🔍 ComparePage: Comparison API response status:', response.status);
           if (response.ok) {
             const data = await response.json();
-            console.log('🔍 ComparePage: Comparison successful, setting data');
             setComparisonData(data);
             // Refresh session info to update hasUser2
             fetchSessionInfo();
-          } else if (response.status === 401) {
-            console.log('🔍 ComparePage: User not authenticated (401), staying on page');
-            // Don't redirect, just stay on the page and show login button
           }
         } catch (err) {
-          console.log('🔍 ComparePage: Comparison API error:', err);
           // User is not logged in, this is expected
         }
       }
@@ -191,7 +184,6 @@ export default function ComparePage() {
       });
       if (!response.ok) {
         if (response.status === 401) {
-          console.log('🔍 ComparePage: fetchComparison got 401, redirecting to home');
           router.push('/');
           return;
         }
