@@ -44,6 +44,10 @@ export async function GET(req: NextRequest) {
     console.log('  - Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
     console.log('  - Client Secret exists:', !!process.env.SPOTIFY_CLIENT_SECRET);
     console.log('  - JWT Secret exists:', !!process.env.JWT_SECRET);
+    console.log('  - Client ID (first 10 chars):', process.env.SPOTIFY_CLIENT_ID?.substring(0, 10) + '...');
+    console.log('  - Client Secret (first 10 chars):', process.env.SPOTIFY_CLIENT_SECRET?.substring(0, 10) + '...');
+    console.log('  - Client ID length:', process.env.SPOTIFY_CLIENT_ID?.length);
+    console.log('  - Client Secret length:', process.env.SPOTIFY_CLIENT_SECRET?.length);
 
     // Exchange code for access and refresh tokens
     const tokenRes = await axios.post(
