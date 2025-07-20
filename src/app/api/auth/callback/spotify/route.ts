@@ -27,13 +27,20 @@ export async function GET(req: NextRequest) {
     const protocol = req.headers.get('x-forwarded-proto') || 'https';
     const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
     const baseUrl = `${protocol}://${host}`;
-    const redirectUri = `${baseUrl}/api/auth/callback/spotify`;
+    
+    // Build the redirect_uri exactly like the login route does
+    const callbackUrl = req.nextUrl.searchParams.get('callbackUrl');
+    let redirectUri = `${baseUrl}/api/auth/callback/spotify`;
+    if (callbackUrl) {
+      redirectUri += `?callbackUrl=${callbackUrl}`;
+    }
 
     console.log('🔍 Token Exchange Debug:');
     console.log('  - Protocol:', protocol);
     console.log('  - Host:', host);
     console.log('  - Base URL:', baseUrl);
     console.log('  - Redirect URI:', redirectUri);
+    console.log('  - Callback URL param:', callbackUrl);
     console.log('  - Client ID exists:', !!process.env.SPOTIFY_CLIENT_ID);
     console.log('  - Client Secret exists:', !!process.env.SPOTIFY_CLIENT_SECRET);
     console.log('  - JWT Secret exists:', !!process.env.JWT_SECRET);
@@ -62,9 +69,9 @@ export async function GET(req: NextRequest) {
     );
 
     // Read the callbackUrl from query parameters
-    const callbackUrl = req.nextUrl.searchParams.get('callbackUrl') || '/dashboard';
+    const finalCallbackUrl = callbackUrl || '/dashboard';
     // Redirect to the callbackUrl with the JWT as a cookie
-    const response = NextResponse.redirect(`${baseUrl}${callbackUrl}`);
+    const response = NextResponse.redirect(`${baseUrl}${finalCallbackUrl}`);
     response.cookies.set('taste_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -72,7 +79,7 @@ export async function GET(req: NextRequest) {
       path: '/',
     });
 
-    console.log('✅ Redirecting to:', `${baseUrl}${callbackUrl}`);
+    console.log('✅ Redirecting to:', `${baseUrl}${finalCallbackUrl}`);
     return response;
   } catch (error: any) {
     console.error('❌ Spotify token exchange error:');
