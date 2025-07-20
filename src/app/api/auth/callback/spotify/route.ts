@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
     const host = req.headers.get('host') || req.headers.get('x-forwarded-host');
     const baseUrl = `${protocol}://${host}`;
     
-    // Use environment variable for redirect URI
-    const redirectUri = process.env.REDIRECT_URI || 'https://tastematch.vercel.app/api/auth/callback/spotify';
+    // Hardcode the exact redirect URI that matches Spotify app settings
+    const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify';
 
     console.log('🔍 Token Exchange Debug:');
     console.log('  - Protocol:', protocol);
