@@ -65,7 +65,7 @@ export class SpotifyAPI {
   }
 
   async getTopArtists(timeRange: 'short_term' | 'medium_term' | 'long_term' = 'medium_term'): Promise<SpotifyArtist[]> {
-    const data = await this.makeRequest(`/me/top/artists?limit=25&time_range=${timeRange}`);
+    const data = await this.makeRequest(`/me/top/artists?limit=50&time_range=${timeRange}`);
     return data.items;
   }
 
@@ -96,18 +96,18 @@ export class SpotifyAPI {
     // For different time ranges, use different data sources to simulate time-based analysis
     if (timeRange === 'short_term') {
       // Short term: Use recently played (last few days)
-      return await this.getRecentlyPlayed(30);
+      return await this.getRecentlyPlayed(50);
     } else if (timeRange === 'medium_term') {
       // Medium term: Mix of recently played and saved tracks
       const [recent, saved] = await Promise.all([
-        this.getRecentlyPlayed(25),
-        this.getSavedTracks(25)
+        this.getRecentlyPlayed(50),
+        this.getSavedTracks(50)
       ]);
       return [...recent, ...saved];
     } else {
       // Long term: Use saved tracks and top tracks (represents overall taste)
       const [saved, top] = await Promise.all([
-        this.getSavedTracks(30),
+        this.getSavedTracks(50),
         this.getTopTracks('long_term')
       ]);
       return [...saved, ...top];
@@ -116,7 +116,7 @@ export class SpotifyAPI {
 
   async getRecentlyPlayedForMetrics(): Promise<SpotifyTrack[]> {
     console.log(`🎵 Fetching recently played tracks for metrics`);
-    return await this.getRecentlyPlayed(10); // Get last 10 recently played
+    return await this.getRecentlyPlayed(20); // Get last 20 recently played
   }
 
   async getTopTracks(timeRange: 'short_term' | 'medium_term' | 'long_term' = 'medium_term'): Promise<SpotifyTrack[]> {

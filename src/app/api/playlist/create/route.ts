@@ -26,14 +26,99 @@ export async function POST(req: NextRequest) {
     // Get user profile to get user ID
     const userProfile = await spotifyAPI.getUserProfile();
 
-    // Combine top tracks from both users, excluding duplicates
-    const allTracks = [...session.user1Profile.topTracks, ...session.user2Profile.topTracks];
-    const uniqueTracks = allTracks.filter((track, index, self) => 
+    // Get comprehensive tracks from both users for better mixing
+    const user1Tracks = session.user1Profile.topTracks;
+    const user2Tracks = session.user2Profile.topTracks;
+    
+    console.log('🎵 User1 tracks count:', user1Tracks.length);
+    console.log('🎵 User2 tracks count:', user2Tracks.length);
+    
+    // Smart mixing algorithm for better taste combination
+    let mixedTracks = [];
+    
+    // Step 1: Find ALL shared tracks (like shared artists) - no limit on search
+    const user1TrackIds = new Set(user1Tracks.map(track => track.id));
+    const user2TrackIds = new Set(user2Tracks.map(track => track.id));
+    const allSharedTracks = user1Tracks.filter(track => user2TrackIds.has(track.id));
+    
+    // Log shared tracks for debugging
+    console.log('🎵 Total shared tracks found:', allSharedTracks.length);
+    console.log('🎵 Shared track names:', allSharedTracks.map(t => `${t.name} by ${t.artists[0].name}`));
+    
+    // Use up to 10 shared tracks (more than before, like shared artists)
+    const sharedTracks = allSharedTracks.slice(0, 10);
+    mixedTracks.push(...sharedTracks);
+    
+    console.log('🎵 Shared tracks added:', sharedTracks.length);
+    
+    // Step 2: Get genre information for smart mixing
+    const user1Genres = session.user1Profile.genres || [];
+    const user2Genres = session.user2Profile.genres || [];
+    const sharedGenres = user1Genres.filter(g => user2Genres.includes(g));
+    
+    console.log('🎵 Shared genres:', sharedGenres);
+    
+    // Step 3: Add tracks from shared genres (up to 6 more tracks) - EQUAL REPRESENTATION
+    const user1Unique = user1Tracks.filter(track => !sharedTracks.some(st => st.id === track.id));
+    const user2Unique = user2Tracks.filter(track => !sharedTracks.some(st => st.id === track.id));
+    
+    // Helper function to check if track belongs to shared genres
+    const isSharedGenreTrack = (track: any) => {
+      return track.artists && track.artists.some((artist: any) => 
+        artist.genres && artist.genres.some((genre: string) => sharedGenres.includes(genre))
+      );
+    };
+    
+    const user1SharedGenreTracks = user1Unique.filter(isSharedGenreTrack).slice(0, 3);
+    const user2SharedGenreTracks = user2Unique.filter(isSharedGenreTrack).slice(0, 3);
+    
+    // Add shared genre tracks in alternating order for balance
+    const maxSharedGenre = Math.max(user1SharedGenreTracks.length, user2SharedGenreTracks.length);
+    for (let i = 0; i < maxSharedGenre; i++) {
+      if (i < user1SharedGenreTracks.length) {
+        mixedTracks.push(user1SharedGenreTracks[i]);
+      }
+      if (i < user2SharedGenreTracks.length) {
+        mixedTracks.push(user2SharedGenreTracks[i]);
+      }
+    }
+    
+    console.log('🎵 Shared genre tracks added:', user1SharedGenreTracks.length + user2SharedGenreTracks.length);
+    
+    // Step 4: Fill remaining slots with PERFECTLY BALANCED representation
+    const remainingSlots = 20 - mixedTracks.length;
+    const slotsPerUser = Math.floor(remainingSlots / 2); // Use floor to ensure equal split
+    
+    // Get remaining unique tracks for each user
+    const user1Remaining = user1Unique.filter(track => 
+      !mixedTracks.some(mt => mt.id === track.id)
+    ).slice(0, slotsPerUser);
+    
+    const user2Remaining = user2Unique.filter(track => 
+      !mixedTracks.some(mt => mt.id === track.id)
+    ).slice(0, slotsPerUser);
+    
+    // Add remaining tracks in strict alternating order
+    const maxRemaining = Math.max(user1Remaining.length, user2Remaining.length);
+    for (let i = 0; i < maxRemaining && mixedTracks.length < 20; i++) {
+      if (i < user1Remaining.length) {
+        mixedTracks.push(user1Remaining[i]);
+      }
+      if (i < user2Remaining.length && mixedTracks.length < 20) {
+        mixedTracks.push(user2Remaining[i]);
+      }
+    }
+    
+    // Remove any duplicates and take exactly 20 tracks
+    const uniqueTracks = mixedTracks.filter((track, index, self) => 
       index === self.findIndex(t => t.id === track.id)
     );
-
-    // Take top 20 tracks
     const selectedTracks = uniqueTracks.slice(0, 20);
+    
+    console.log('🎵 Final playlist tracks:', selectedTracks.length);
+    console.log('🎵 User1 tracks in playlist:', selectedTracks.filter(t => user1TrackIds.has(t.id)).length);
+    console.log('🎵 User2 tracks in playlist:', selectedTracks.filter(t => !user1TrackIds.has(t.id)).length);
+    
     const trackUris = selectedTracks.map(track => `spotify:track:${track.id}`);
 
     // Create playlist name
@@ -87,9 +172,9 @@ export async function POST_blended(req: NextRequest) {
     const sharedGenres = user1Genres.filter(g => user2Genres.includes(g));
 
     // Helper: filter tracks by genre
-    function filterTracksByGenres(tracks, genres) {
+    function filterTracksByGenres(tracks: any[], genres: string[]) {
       return tracks.filter(track =>
-        track.artists.some(artist => artist.genres && artist.genres.some(g => genres.includes(g)))
+        track.artists.some((artist: any) => artist.genres && artist.genres.some((g: string) => genres.includes(g)))
       );
     }
 

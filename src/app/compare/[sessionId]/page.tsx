@@ -510,7 +510,7 @@ export default function ComparePage() {
               </div>
             </div>
             <div className="text-white text-lg md:text-xl font-medium animate-fade-in text-center">
-              {selectedTone === 'default' && (comparison.playfulSummary || 'Your musical chemistry will appear here!')}
+              {selectedTone === 'default' && `${user1.display_name} and ${user2.display_name} have ${comparison.compatibilityScore}% compatibility. ${comparison.compatibilityScore >= 80 ? 'You two are musical soulmates!' : comparison.compatibilityScore >= 60 ? 'You actually vibe pretty well together!' : comparison.compatibilityScore >= 40 ? 'You have some solid musical overlap.' : comparison.compatibilityScore >= 20 ? 'You have very different musical worlds.' : 'You are musical opposites!'}`}
               {selectedTone === 'chaotic' && `${user1.display_name} and ${user2.display_name} have ${comparison.compatibilityScore}% compatibility. ${comparison.compatibilityScore < 50 ? 'You two are on completely different wavelengths. This could be chaos.' : 'You actually vibe pretty well together. Not as chaotic as expected!'}`}
               {selectedTone === 'hype' && `${user1.display_name} and ${user2.display_name} are both into the hits. With ${comparison.compatibilityScore}% compatibility, you'll probably agree on what to play at parties.`}
               {selectedTone === 'chill' && `${user1.display_name} and ${user2.display_name} have similar chill vibes. Your ${comparison.compatibilityScore}% match means you'll probably get along well on road trips.`}

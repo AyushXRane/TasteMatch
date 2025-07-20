@@ -99,15 +99,15 @@ export function getGenreComparison(artists1: SpotifyArtist[], artists2: SpotifyA
     });
   });
 
-  // Get top 5 genres for each user
+  // Get top 8 genres for each user
   const topGenres1 = Array.from(genreCount1.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
+    .slice(0, 8)
     .map(([genre, count]) => ({ genre, count }));
 
   const topGenres2 = Array.from(genreCount2.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
+    .slice(0, 8)
     .map(([genre, count]) => ({ genre, count }));
 
   // Find overlapping genres
@@ -374,7 +374,7 @@ function generatePlayfulSummary({
   // Template options
   const templates = [
     () => sharedGenres.length > 0
-      ? `You both enjoy ${sharedGenres.join(' and ')}. Looks like you’d have a good time swapping playlists.`
+      ? `You both enjoy ${sharedGenres.join(' and ')}. Looks like you'd have a good time swapping playlists.`
       : `You each bring something different to the mix—unique tastes make for interesting listening!`,
     () => sharedArtists.length > 0
       ? `You both have a soft spot for ${sharedArtists[0].name}.`
@@ -401,11 +401,10 @@ function generatePlayfulSummary({
 
 export function compareTastes(
   user1Profile: { user: { display_name: string }; topArtists: SpotifyArtist[]; topTracks: SpotifyTrack[]; trackMetrics: TrackMetrics; genres?: string[] },
-  user2Profile: { user: { display_name: string }; topArtists: SpotifyArtist[]; topTracks: SpotifyTrack[]; trackMetrics: TrackMetrics; genres?: string[] }
+  user2Profile: { user: { display_name: string }; topArtists: SpotifyArtist[]; topTracks: SpotifyTrack[]; trackMetrics: TrackMetrics; genres?: string[] },
+  additionalUser1Tracks?: SpotifyTrack[],
+  additionalUser2Tracks?: SpotifyTrack[]
 ): ComparisonResult {
-  console.log('🔍 Track metrics check - User1:', user1Profile.trackMetrics);
-  console.log('🔍 Track metrics check - User2:', user2Profile.trackMetrics);
-  
   // Get track metrics for each user
   const user1Metrics = user1Profile.trackMetrics;
   const user2Metrics = user2Profile.trackMetrics;
@@ -421,21 +420,54 @@ export function compareTastes(
 
   // Find shared artists and tracks
   const sharedArtists = findSharedItems(user1Profile.topArtists, user2Profile.topArtists);
-  const sharedTracks = findSharedItems(user1Profile.topTracks, user2Profile.topTracks);
+  
+  // Enhanced shared tracks detection - use more tracks for better overlap
+  // Combine top tracks with recent tracks and additional tracks from other time ranges
+  const user1AllTracks = [
+    ...user1Profile.topTracks, 
+    ...user1Metrics.recentTracks.map(t => ({
+      id: t.name + t.artist, // Create unique ID for recent tracks
+      name: t.name,
+      artists: [{ name: t.artist }],
+      album: { name: '', images: [], release_date: '' },
+      popularity: t.popularity
+    })),
+    ...(additionalUser1Tracks || [])
+  ];
+  
+  const user2AllTracks = [
+    ...user2Profile.topTracks, 
+    ...user2Metrics.recentTracks.map(t => ({
+      id: t.name + t.artist, // Create unique ID for recent tracks
+      name: t.name,
+      artists: [{ name: t.artist }],
+      album: { name: '', images: [], release_date: '' },
+      popularity: t.popularity
+    })),
+    ...(additionalUser2Tracks || [])
+  ];
+  
+  const sharedTracks = findSharedItems(user1AllTracks, user2AllTracks);
 
   // Calculate genre comparison
   const genreComparison = getGenreComparison(user1Profile.topArtists, user2Profile.topArtists);
 
   // Calculate overall compatibility score
   const artistSimilarity = sharedArtists.length / Math.max(user1Profile.topArtists.length, user2Profile.topArtists.length);
-  const trackSimilarity = sharedTracks.length / Math.max(user1Profile.topTracks.length, user2Profile.topTracks.length);
+  const trackSimilarity = sharedTracks.length / Math.max(user1AllTracks.length, user2AllTracks.length);
   const genreSimilarity = genreComparison.overlap.length / Math.max(genreComparison.user1.length, genreComparison.user2.length);
 
+  // Ensure all similarity scores are capped at 1.0 (100%)
+  const cappedArtistSimilarity = Math.min(artistSimilarity, 1.0);
+  const cappedTrackSimilarity = Math.min(trackSimilarity, 1.0);
+  const cappedGenreSimilarity = Math.min(genreSimilarity, 1.0);
+  const cappedMetricsSimilarity = Math.min(metricsSimilarity, 1.0);
+
   const compatibilityScore = Math.round(
-    (metricsSimilarity * 0.3 + artistSimilarity * 0.25 + trackSimilarity * 0.2 + genreSimilarity * 0.25) * 100
+    (cappedMetricsSimilarity * 0.3 + cappedArtistSimilarity * 0.25 + cappedTrackSimilarity * 0.2 + cappedGenreSimilarity * 0.25) * 100
   );
 
-  // Generate taste summary
+  // Generate taste summary with more variety
   const tasteSummary = generateTasteSummary(
     user1Profile.user.display_name,
     user2Profile.user.display_name,
@@ -465,7 +497,7 @@ export function compareTastes(
   // Assign genre tag
   const genreTag = assignGenreTag(genreComparison);
 
-  // Playful summary
+  // Playful summary with more variety
   const playfulSummary = generatePlayfulSummary({
     user1Name: user1Profile.user.display_name,
     user2Name: user2Profile.user.display_name,

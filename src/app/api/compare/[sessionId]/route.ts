@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { SpotifyAPI } from '@/lib/spotify';
 import { storage } from '@/lib/storage';
-import { compareTastes } from '@/lib/similarity';
+import { compareTastes, getGenreComparison } from '@/lib/similarity';
 
 export async function POST(
   req: NextRequest,
@@ -46,15 +46,25 @@ export async function POST(
 
     // If this is the first time (no user2), fetch fresh data for both users
     if (!session.user2Profile) {
-      console.log('🔧 API: Fetching fresh data for both users');
-      const user1Profile = await spotifyAPI.getUserTasteProfile(timeRange);
+      console.log('🔧 API: User2 joining - fetching user2 data with current token');
+      
+      // Use existing user1 data from session, only fetch user2 data with current token
+      const user1Profile = session.user1Profile;
       const user2Profile = await spotifyAPI.getUserTasteProfile(timeRange);
       
-      // Update the session with fresh data
+      // Fetch additional tracks from different time ranges for better shared track detection
+      const user1ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
+      const user2ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
+      
+      console.log('🔧 API: User1:', user1Profile.user.display_name);
+      console.log('🔧 API: User2:', user2Profile.user.display_name);
+      console.log('🔧 API: Additional short-term tracks - User1:', user1ShortTermTracks.length, 'User2:', user2ShortTermTracks.length);
+      
+      // Update the session with user2 data
       storage.updateSessionData(sessionId, user1Profile, user2Profile);
       
-      // Compare the tastes using fresh data
-      const comparison = compareTastes(user1Profile, user2Profile);
+      // Compare the tastes using user1 from session and user2 from current token, with additional tracks
+      const comparison = compareTastes(user1Profile, user2Profile, user1ShortTermTracks, user2ShortTermTracks);
 
       return NextResponse.json({
         comparison,
@@ -73,23 +83,18 @@ export async function POST(
         return NextResponse.json({ error: 'Session not found' }, { status: 404 });
       }
       
-      // Use different data sources for different time ranges
-      const user1TopTracks = await spotifyAPI.getTracksForTimeRange(timeRange);
-      const user2TopTracks = await spotifyAPI.getTracksForTimeRange(timeRange);
+      // Use existing data from session instead of fetching fresh data
+      const user1Profile = existingSession.user1Profile;
+      const user2Profile = existingSession.user2Profile!;
       
-      console.log(`🔧 API: Fetched ${user1TopTracks.length} tracks for user1 in ${timeRange}`);
-      console.log(`🔧 API: Fetched ${user2TopTracks.length} tracks for user2 in ${timeRange}`);
-      console.log(`🔧 API: Sample tracks for user1:`, user1TopTracks.slice(0, 3).map(t => ({ name: t.name, popularity: t.popularity, release_date: t.album.release_date })));
-      console.log(`🔧 API: Track IDs for user1 (${timeRange}):`, user1TopTracks.map(t => t.id).slice(0, 5));
-      
-      // Calculate track metrics for both users
-      const user1TrackMetrics = await spotifyAPI.calculateTrackMetrics(user1TopTracks);
-      const user2TrackMetrics = await spotifyAPI.calculateTrackMetrics(user2TopTracks);
+      console.log('🔧 API: Using existing session data for audioFeaturesOnly');
+      console.log('🔧 API: User1:', user1Profile.user.display_name);
+      console.log('🔧 API: User2:', user2Profile.user.display_name);
 
       return NextResponse.json({
         trackMetricsComparison: {
-          user1: user1TrackMetrics,
-          user2: user2TrackMetrics,
+          user1: user1Profile.trackMetrics,
+          user2: user2Profile.trackMetrics,
         }
       });
     }
@@ -98,45 +103,31 @@ export async function POST(
     if (genresOnly) {
       console.log('🔧 API: Updating genres only for timeRange:', timeRange);
       
-      // Get existing session data
-      const existingSession = storage.getSession(sessionId);
-      if (!existingSession) {
-        return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-      }
+      // Fetch fresh data for the specified time range
+      const user1Profile = await spotifyAPI.getUserTasteProfile(timeRange);
+      const user2Profile = await spotifyAPI.getUserTasteProfile(timeRange);
       
-      // Only fetch artists for the new time range (genres come from artists)
-      const user1TopArtists = await spotifyAPI.getTopArtists(timeRange);
-      const user2TopArtists = await spotifyAPI.getTopArtists(timeRange);
+      console.log('🔧 API: Fresh data fetched for genresOnly with timeRange:', timeRange);
+      console.log('🔧 API: User1:', user1Profile.user.display_name);
+      console.log('🔧 API: User2:', user2Profile.user.display_name);
+
+      // Use the proper genre comparison function to get accurate counts
+      const genreComparison = getGenreComparison(user1Profile.topArtists, user2Profile.topArtists);
       
-      // Calculate only the genre comparison
-      const user1Genres = Array.from(new Set(user1TopArtists.flatMap(artist => artist.genres)));
-      const user2Genres = Array.from(new Set(user2TopArtists.flatMap(artist => artist.genres)));
-      
-      // Count genre occurrences
-      const user1GenreCounts = user1TopArtists.flatMap(artist => artist.genres).reduce((acc, genre) => {
-        acc[genre] = (acc[genre] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      const user2GenreCounts = user2TopArtists.flatMap(artist => artist.genres).reduce((acc, genre) => {
-        acc[genre] = (acc[genre] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      const user1GenreData = Object.entries(user1GenreCounts)
-        .map(([genre, count]) => ({ genre, count }))
-        .sort((a, b) => b.count - a.count);
-      
-      const user2GenreData = Object.entries(user2GenreCounts)
-        .map(([genre, count]) => ({ genre, count }))
-        .sort((a, b) => b.count - a.count);
+      // Debug logging to verify genre data
+      console.log('🔧 API: Genre comparison results:');
+      console.log('🔧 API: User1 genres:', genreComparison.user1);
+      console.log('🔧 API: User2 genres:', genreComparison.user2);
+      console.log('🔧 API: Genre overlap:', genreComparison.overlap);
+      console.log('🔧 API: User1 artists count:', user1Profile.topArtists.length);
+      console.log('🔧 API: User2 artists count:', user2Profile.topArtists.length);
 
       return NextResponse.json({
         genreComparison: {
-          user1: user1GenreData,
-          user2: user2GenreData,
+          user1: genreComparison.user1,
+          user2: genreComparison.user2,
         },
-        genreOverlap: user1Genres.filter(genre => user2Genres.includes(genre)),
+        genreOverlap: genreComparison.overlap,
       });
     }
 
@@ -144,40 +135,21 @@ export async function POST(
     if (topArtistsTracksOnly) {
       console.log('🔧 API: Updating top artists and tracks only for timeRange:', timeRange);
       
-      // Get existing session data
-      const existingSession = storage.getSession(sessionId);
-      if (!existingSession) {
-        return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-      }
+      // Fetch fresh data for the specified time range
+      const user1Profile = await spotifyAPI.getUserTasteProfile(timeRange);
+      const user2Profile = await spotifyAPI.getUserTasteProfile(timeRange);
       
-      // Only fetch artists and tracks for the new time range
-      const user1TopArtists = await spotifyAPI.getTopArtists(timeRange);
-      const user1TopTracks = await spotifyAPI.getTopTracks(timeRange);
-      const user2TopArtists = await spotifyAPI.getTopArtists(timeRange);
-      const user2TopTracks = await spotifyAPI.getTopTracks(timeRange);
+      // Fetch additional tracks from different time ranges for better shared track detection
+      const user1ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
+      const user2ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
       
-      // Create updated profiles with new artists/tracks but keep existing data
-      const user1Profile = {
-        user: existingSession.user1Profile.user,
-        topArtists: user1TopArtists,
-        topTracks: user1TopTracks,
-        trackMetrics: existingSession.user1Profile.trackMetrics,
-        genres: existingSession.user1Profile.genres,
-      };
+      console.log('🔧 API: Fresh data fetched for topArtistsTracksOnly with timeRange:', timeRange);
+      console.log('🔧 API: User1:', user1Profile.user.display_name);
+      console.log('🔧 API: User2:', user2Profile.user.display_name);
+      console.log('🔧 API: Additional short-term tracks - User1:', user1ShortTermTracks.length, 'User2:', user2ShortTermTracks.length);
       
-      const user2Profile = {
-        user: existingSession.user2Profile!.user,
-        topArtists: user2TopArtists,
-        topTracks: user2TopTracks,
-        trackMetrics: existingSession.user2Profile!.trackMetrics,
-        genres: existingSession.user2Profile!.genres,
-      };
-      
-      // Update the session with new artists/tracks
-      storage.updateSessionData(sessionId, user1Profile, user2Profile);
-      
-      // Compare the tastes
-      const comparison = compareTastes(user1Profile, user2Profile);
+      // Compare the tastes using fresh data with additional tracks
+      const comparison = compareTastes(user1Profile, user2Profile, user1ShortTermTracks, user2ShortTermTracks);
 
       return NextResponse.json({
         comparison,
@@ -186,15 +158,58 @@ export async function POST(
       });
     }
 
-    // If user2 already exists, this is a time range refresh - fetch fresh data for both users
-    const user1Profile = await spotifyAPI.getUserTasteProfile(timeRange);
-    const user2Profile = await spotifyAPI.getUserTasteProfile(timeRange);
+    // If user2 already exists, check if we need to refresh data for time range changes
+    console.log('🔧 API: User2 already exists - checking if time range refresh needed');
+    
+    // Check if this is a time range refresh request
+    const isTimeRangeRefresh = body.timeRange && body.timeRange !== 'medium_term';
+    
+    if (isTimeRangeRefresh) {
+      console.log('🔧 API: Time range refresh requested - fetching fresh data for both users');
+      
+      // For time range refresh, we need to fetch fresh data
+      // This will use the current user's token for both users (limitation)
+      const user1Profile = await spotifyAPI.getUserTasteProfile(timeRange);
+      const user2Profile = await spotifyAPI.getUserTasteProfile(timeRange);
+      
+      // Fetch additional tracks from different time ranges for better shared track detection
+      const user1ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
+      const user2ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
+      
+      console.log('🔧 API: Fresh data fetched for timeRange:', timeRange);
+      console.log('🔧 API: User1:', user1Profile.user.display_name);
+      console.log('🔧 API: User2:', user2Profile.user.display_name);
+      console.log('🔧 API: Additional short-term tracks - User1:', user1ShortTermTracks.length, 'User2:', user2ShortTermTracks.length);
+      
+      // Update the session with fresh data
+      storage.updateSessionData(sessionId, user1Profile, user2Profile);
+      
+      // Compare the tastes using fresh data with additional tracks
+      const comparison = compareTastes(user1Profile, user2Profile, user1ShortTermTracks, user2ShortTermTracks);
 
-    // Update the session with fresh data
-    storage.updateSessionData(sessionId, user1Profile, user2Profile);
-
-    // Compare the tastes
-    const comparison = compareTastes(user1Profile, user2Profile);
+      return NextResponse.json({
+        comparison,
+        user1: user1Profile.user,
+        user2: user2Profile.user,
+      });
+    }
+    
+    // Use existing session data for normal requests
+    const user1Profile = session.user1Profile;
+    const user2Profile = session.user2Profile!;
+    
+    // Fetch additional tracks from different time ranges for better shared track detection
+    const user1ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
+    const user2ShortTermTracks = await spotifyAPI.getTopTracks('short_term');
+    
+    console.log('🔧 API: Using existing session data');
+    console.log('🔧 API: User1:', user1Profile.user.display_name);
+    console.log('🔧 API: User2:', user2Profile.user.display_name);
+    console.log('🔧 API: Requested timeRange:', timeRange);
+    console.log('🔧 API: Additional short-term tracks - User1:', user1ShortTermTracks.length, 'User2:', user2ShortTermTracks.length);
+    
+    // Compare the tastes using existing session data with additional tracks
+    const comparison = compareTastes(user1Profile, user2Profile, user1ShortTermTracks, user2ShortTermTracks);
 
     return NextResponse.json({
       comparison,

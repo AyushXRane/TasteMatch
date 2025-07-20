@@ -15,8 +15,20 @@ export async function GET(req: NextRequest) {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { access_token: string };
     const spotifyAPI = new SpotifyAPI(decoded.access_token);
 
-    // Fetch user's taste profile
-    const tasteProfile = await spotifyAPI.getUserTasteProfile();
+    console.log('🔍 Starting getUserTasteProfile...');
+    
+    // Fetch user's taste profile with detailed error handling
+    let tasteProfile;
+    try {
+      tasteProfile = await spotifyAPI.getUserTasteProfile();
+      console.log('✅ getUserTasteProfile completed successfully');
+    } catch (error: any) {
+      console.error('❌ getUserTasteProfile failed:', error);
+      console.error('  - Error message:', error.message);
+      console.error('  - Response status:', error.response?.status);
+      console.error('  - Response data:', error.response?.data);
+      throw error;
+    }
 
     // Create a comparison session
     const sessionId = storage.createSession(tasteProfile);
@@ -32,7 +44,14 @@ export async function GET(req: NextRequest) {
       shareUrl: `${baseUrl}/compare/${sessionId}`,
     });
   } catch (error: any) {
-    console.error('Error fetching user profile:', error);
-    return NextResponse.json({ error: 'Failed to fetch user profile' }, { status: 500 });
+    console.error('❌ Error in /api/user/profile:', error);
+    console.error('  - Error message:', error.message);
+    console.error('  - Response status:', error.response?.status);
+    console.error('  - Response data:', error.response?.data);
+    
+    return NextResponse.json({ 
+      error: 'Failed to fetch user profile',
+      details: error.response?.data || error.message 
+    }, { status: 500 });
   }
 } 
