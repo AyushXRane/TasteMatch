@@ -236,16 +236,8 @@ function assignListeningPersonality({ topArtists, topTracks, trackMetrics, genre
   const userTopGenre = trackMetrics.topGenre;
   const recentTracksCount = trackMetrics.recentTracks.length;
 
-  // 4. Assign personality based on listening patterns
-  if (uniqueGenres > 10) {
-    return 'The Nomad';
-  }
-  if (uniqueGenres > 6) {
-    return 'The Voyager';
-  }
-  if (uniqueGenres > 4 && avgPopularity < 50) {
-    return 'The Adventurer';
-  }
+  // 4. Assign personality based on listening patterns (more balanced)
+  // Check for very specific patterns first
   if (dominantGenrePercent > 0.7 && topGenre) {
     return 'The Devotee';
   }
@@ -258,6 +250,14 @@ function assignListeningPersonality({ topArtists, topTracks, trackMetrics, genre
   if (uniqueGenres <= 2 && topGenre) {
     return 'The Specialist';
   }
+  if (dominantGenrePercent > 0.5 && dominantGenrePercent <= 0.7) {
+    return 'The Fan Clubber';
+  }
+  if (uniqueGenres <= 3) {
+    return 'The Replayer';
+  }
+  
+  // Then check for moderate patterns
   if (uniqueGenres > 4 && avgPopularity < 40) {
     return 'The Maverick';
   }
@@ -270,18 +270,24 @@ function assignListeningPersonality({ topArtists, topTracks, trackMetrics, genre
   if (avgPopularity < 40) {
     return 'The Time Traveler';
   }
-  if (dominantGenrePercent > 0.5 && dominantGenrePercent <= 0.7) {
-    return 'The Fan Clubber';
-  }
   if (uniqueGenres > 5 && uniqueGenres <= 7) {
     return 'The Jukeboxer';
   }
   if (avgPopularity > 40 && avgPopularity < 60) {
     return 'The Musicologist';
   }
-  if (uniqueGenres <= 3) {
-    return 'The Replayer';
+  
+  // Then check for broader patterns (less dominant)
+  if (uniqueGenres > 10) {
+    return 'The Nomad';
   }
+  if (uniqueGenres > 6) {
+    return 'The Voyager';
+  }
+  if (uniqueGenres > 4 && avgPopularity < 50) {
+    return 'The Adventurer';
+  }
+  
   return 'The Early Adopter';
 }
 
