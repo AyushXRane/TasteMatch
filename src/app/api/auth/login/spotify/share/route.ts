@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   // Always use clean redirect_uri for share links, put callbackUrl in state parameter
       const redirectUri = 'https://tastematch.vercel.app/api/auth/callback/spotify/share';
 
-  // Ensure callbackUrl is properly encoded for the state parameter
-  const encodedCallbackUrl = encodeURIComponent(callbackUrl);
+  // Use callbackUrl directly in state parameter (no double encoding)
+  const stateParam = callbackUrl;
   
 
   
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       'user-read-playback-state'
     ].join(' '),
     show_dialog: 'true',
-    state: encodedCallbackUrl,
+    state: stateParam,
   });
 
 

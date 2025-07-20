@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     const token = jwt.sign(
       { access_token, refresh_token },
       process.env.JWT_SECRET!,
-      { expiresIn: '1h' } // Use fixed expiration instead of expires_in
+      { expiresIn: expires_in } // Use Spotify's expiration time
     );
 
     // For share links, always try to redirect to comparison page
@@ -65,8 +65,7 @@ export async function GET(req: NextRequest) {
     let sessionId = null;
     
     if (stateParam) {
-      const decodedState = decodeURIComponent(stateParam);
-      const match = decodedState.match(/\/compare\/([^\/\?]+)/);
+      const match = stateParam.match(/\/compare\/([^\/\?]+)/);
       if (match) {
         sessionId = match[1];
       }
@@ -92,10 +91,9 @@ export async function GET(req: NextRequest) {
     const response = NextResponse.redirect(`${baseUrl}${callbackUrl}`);
     response.cookies.set('taste_token', token, {
       httpOnly: true,
-      secure: true, // Always use secure for Vercel
-      maxAge: 3600, // 1 hour in seconds
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: expires_in,
       path: '/',
-      sameSite: 'lax',
     });
 
     console.log('🔍 Setting cookie - token length:', token.length);
